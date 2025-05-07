@@ -24,12 +24,17 @@ export default function TabLayout() {
             height: 58,
             borderTopWidth: 0,
             shadowColor: 'transparent',
-           
+            // position: 'absolute',
+            // bottom: 0,
+            // left: 0,
+            // right: 0,
+            // zIndex: 999,
+            // elevation: 8,
           },
         }),
         // Pengaturan penting untuk mencegah keyboard menimpa tabBar
-        tabBarHideOnKeyboard: true, 
-        
+        tabBarHideOnKeyboard: true,
+     
       }}>
       <Tabs.Screen
         name="index"
@@ -82,7 +87,7 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   addButton: {
     position: 'absolute',
-    left: 9,
+    // left: 9,
     width: 60,
     height: 60,
     borderRadius: 30,

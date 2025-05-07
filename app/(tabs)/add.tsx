@@ -1,13 +1,19 @@
-import { addStyles } from '../../styles/addStyles';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { Picker } from '@react-native-picker/picker'; // Import Picker
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 import React, { useState } from 'react';
 import { Alert, Image, Platform, SafeAreaView, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useEvents } from '../../hooks/EventContext'; // Import useEvents
+import { addStyles } from '../../styles/addStyles';
 
 export default function AddScreen() {
+  const { addEvent } = useEvents(); // Ambil addEvent dari context
   const [category, setCategory] = useState('');
+  const [categories, setCategories] = useState([]); // State untuk daftar kategori
   const [eventName, setEventName] = useState('');
   const [startTime, setStartTime] = useState(new Date());
   const [endTime, setEndTime] = useState(new Date());
@@ -18,14 +24,33 @@ export default function AddScreen() {
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
 
-  const handleStartTimeChange: (event: any, selectedTime: Date | undefined) => void = (event, selectedTime) => {
+  // Fetch categories from API
+  React.useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('http://178.128.103.81:3002/api/v1/categories');
+        const result = await response.json();
+        if (result.success) {
+          setCategories(result.data); // Simpan daftar kategori ke state
+        } else {
+          console.error('Failed to fetch categories:', result.message);
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  const handleStartTimeChange = (event: any, selectedTime: Date | undefined) => {
     setShowStartTimePicker(false);
     if (selectedTime) {
       setStartTime(selectedTime);
     }
   };
 
-  const handleEndTimeChange: (event: any, selectedTime: Date | undefined) => void = (event, selectedTime) => {
+  const handleEndTimeChange = (event: any, selectedTime: Date | undefined) => {
     setShowEndTimePicker(false);
     if (selectedTime) {
       setEndTime(selectedTime);
@@ -51,20 +76,70 @@ export default function AddScreen() {
     }
   };
 
-  const handleSubmit = () => {
-    Alert.alert(
-      'Event Added',
-      `Category: ${category}\nEvent: ${eventName}\nTime: ${startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}\nLocation: ${location}\nPeople: ${people}\nDescription: ${description}`
-    );
-    // Reset form
-    setCategory('');
-    setEventName('');
-    setStartTime(new Date());
-    setEndTime(new Date());
-    setLocation('');
-    setPeople('');
-    setDescription('');
-    setImage(null);
+  const handleSubmit = async () => {
+    try {
+      const accessToken = await SecureStore.getItemAsync('accessToken');
+      const username = await SecureStore.getItemAsync('username'); // Ambil username dari SecureStore
+      if (!accessToken || !username) {
+        Alert.alert('Error', 'You are not logged in.');
+        return;
+      }
+
+      const eventData = {
+        username, // Tambahkan username ke payload
+        category_id: parseInt(category, 10),
+        event_name: eventName,
+        event_start_time: startTime.toISOString(),
+        event_end_time: endTime.toISOString(),
+        location,
+        number_people: parseInt(people, 10),
+        description,
+        image_url: image || 'https://example.com/default-image.jpg',
+      };
+
+      const response = await fetch('http://178.128.103.81:3002/api/v1/events', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(eventData),
+      });
+
+      const result = await response.json();
+      console.log('API Response:', result);
+
+      if (result.success) {
+        addEvent(result.data); // Tambahkan event baru ke context
+        Alert.alert('Success', 'Event created successfully!', [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Reset form
+              setCategory('');
+              setEventName('');
+              setStartTime(new Date());
+              setEndTime(new Date());
+              setLocation('');
+              setPeople('');
+              setDescription('');
+              setImage(null);
+              
+              // Kembali ke tab Home dan refresh datanya
+              router.replace('/(tabs)');
+            }
+          }
+        ]);
+      } else {
+        const errorMessage = Array.isArray(result.message)
+          ? result.message.join(', ')
+          : result.message || 'Failed to create event.';
+        Alert.alert('Error', errorMessage);
+      }
+    } catch (error) {
+      console.error('Error creating event:', error);
+      Alert.alert('Error', 'An error occurred while creating the event.');
+    }
   };
 
   return (
@@ -80,7 +155,7 @@ export default function AddScreen() {
       </LinearGradient>
 
       {/* Content */}
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={addStyles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
@@ -105,19 +180,24 @@ export default function AddScreen() {
 
         {/* Form Container */}
         <View style={addStyles.formCard}>
-          {/* Input Category */}
+          {/* Dropdown Category */}
           <View style={addStyles.inputGroup}>
             <View style={addStyles.labelContainer}>
               <Ionicons name="list" size={20} color="#6C4AB6" />
               <Text style={addStyles.label}>Category</Text>
             </View>
-            <TextInput
-              style={addStyles.input}
-              placeholder="Enter category (e.g., Football, Basketball)"
-              value={category}
-              onChangeText={setCategory}
-              placeholderTextColor="#999"
-            />
+            <View style={addStyles.pickerContainer}>
+              <Picker
+                selectedValue={category}
+                onValueChange={(itemValue) => setCategory(itemValue)}
+                style={addStyles.picker}
+              >
+                <Picker.Item label="Select a category" value="" />
+                {categories.map((cat) => (
+                  <Picker.Item key={cat.id} label={cat.category_name} value={cat.id.toString()} />
+                ))}
+              </Picker>
+            </View>
           </View>
 
           {/* Input Event Name */}
@@ -206,22 +286,22 @@ export default function AddScreen() {
           </View>
 
           {/* Description */}
-            <View style={addStyles.inputGroup}>
-                <View style={addStyles.labelContainer}>
-                    <Ionicons name="document-text" size={20} color="#6C4AB6" />
-                    <Text style={addStyles.label}>Description</Text>
-                </View>
-                <TextInput
-                    style={[addStyles.input, addStyles.textArea]}
-                    placeholder="Enter event description"
-                    value={description}
-                    onChangeText={setDescription}
-                    placeholderTextColor="#999"
-                    multiline={true}
-                    numberOfLines={4}
-                    textAlignVertical="top"
-                />
+          <View style={addStyles.inputGroup}>
+            <View style={addStyles.labelContainer}>
+              <Ionicons name="document-text" size={20} color="#6C4AB6" />
+              <Text style={addStyles.label}>Description</Text>
             </View>
+            <TextInput
+              style={[addStyles.input, addStyles.textArea]}
+              placeholder="Enter event description"
+              value={description}
+              onChangeText={setDescription}
+              placeholderTextColor="#999"
+              multiline={true}
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
+          </View>
         </View>
 
         {/* Submit Button */}

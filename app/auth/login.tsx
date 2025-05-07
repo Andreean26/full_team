@@ -25,13 +25,34 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     if (username.trim() && password.trim()) {
       try {
-        // Simulasi sukses login
-        // Di aplikasi nyata, ini akan memanggil API dan menyimpan token dari respons
-        await SecureStore.setItemAsync('userToken', 'sample-auth-token');
-        
-        // Navigasi ke halaman utama
-        router.replace('/(tabs)');
+        // Kirim POST request ke login API
+        const response = await fetch('http://178.128.103.81:3002/api/v1/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ username, password }),
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // Ambil id dan accessToken dari respons API
+          const { id } = result.data.account;
+          const { accessToken } = result.data;
+
+          // Simpan id dan accessToken ke SecureStore
+          await SecureStore.setItemAsync('userId', id.toString());
+          await SecureStore.setItemAsync('username', username);
+          await SecureStore.setItemAsync('accessToken', accessToken);
+
+          // Navigasi ke halaman utama
+          router.replace('/(tabs)');
+        } else {
+          Alert.alert('Login Error', result.message || 'Login failed');
+        }
       } catch (error) {
+        console.error('Error during login:', error);
         Alert.alert('Login Error', 'An error occurred during login');
       }
     } else {

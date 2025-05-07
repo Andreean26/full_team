@@ -1,26 +1,76 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { Image, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform, StatusBar } from 'react-native';
 
 export default function AccountScreen() {
   const [user, setUser] = useState({
-    name: 'John Doe',
-    email: 'johndoe@example.com',
-    phone: '+62 812 3456 7890',
-    photo: 'https://randomuser.me/api/portraits/men/32.jpg',
+    username: '',
+    email: '',
+    phone_number: '',
+    photo: 'https://randomuser.me/api/portraits/men/32.jpg', // Placeholder photo
   });
-
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  const handleLogout = () => {
-    // Navigasi ke halaman login
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        // Ambil id dan accessToken dari SecureStore
+        const userId = await SecureStore.getItemAsync('userId');
+        const accessToken = await SecureStore.getItemAsync('accessToken');
+
+        if (userId && accessToken) {
+          // Lakukan permintaan GET ke API untuk mendapatkan data akun
+          const response = await fetch(`http://178.128.103.81:3002/api/v1/accounts/${userId}`, {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            // Perbarui state dengan data akun
+            setUser({
+              username: result.data.username,
+              email: result.data.email,
+              phone_number: result.data.phone_number,
+              photo: 'https://randomuser.me/api/portraits/men/32.jpg', // Placeholder photo
+            });
+          } else {
+            console.error('Failed to fetch user data:', result.message);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  const handleLogout = async () => {
+    // Hapus data dari SecureStore dan navigasi ke halaman login
+    await SecureStore.deleteItemAsync('userId');
+    await SecureStore.deleteItemAsync('accessToken');
     router.replace('/auth/login');
   };
 
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ActivityIndicator size="large" color="#6C4AB6" />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header tetap di posisi awal */}
       <View style={styles.headerContainer}>
         <Text style={styles.headerTitle}>Profile</Text>
         <TouchableOpacity style={styles.settingsButton}>
@@ -28,39 +78,16 @@ export default function AccountScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Content */}
       <ScrollView contentContainerStyle={styles.contentContainer}>
-        {/* Profile Card */}
         <View style={styles.profileCard}>
           <View style={styles.photoContainer}>
             <Image source={{ uri: user.photo }} style={styles.profilePhoto} />
-            <TouchableOpacity style={styles.editPhotoButton}>
-              <Ionicons name="camera" size={20} color="#fff" />
-            </TouchableOpacity>
           </View>
 
-          <Text style={styles.profileName}>{user.name}</Text>
+          <Text style={styles.profileName}>{user.username}</Text>
           <Text style={styles.profileBio}>Sports Enthusiast | Football Player</Text>
-
-          <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>15</Text>
-              <Text style={styles.statLabel}>Events</Text>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>28</Text>
-              <Text style={styles.statLabel}>Teams</Text>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>124</Text>
-              <Text style={styles.statLabel}>Friends</Text>
-            </View>
-          </View>
         </View>
 
-        {/* Contact Information */}
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Contact Information</Text>
 
@@ -73,9 +100,6 @@ export default function AccountScreen() {
                 <Text style={styles.infoLabel}>Email</Text>
                 <Text style={styles.infoValue}>{user.email}</Text>
               </View>
-              <TouchableOpacity>
-                <Ionicons name="create-outline" size={20} color="#6C4AB6" />
-              </TouchableOpacity>
             </View>
 
             <View style={styles.separator} />
@@ -86,53 +110,9 @@ export default function AccountScreen() {
               </View>
               <View style={styles.infoContent}>
                 <Text style={styles.infoLabel}>Phone</Text>
-                <Text style={styles.infoValue}>{user.phone}</Text>
+                <Text style={styles.infoValue}>{user.phone_number}</Text>
               </View>
-              <TouchableOpacity>
-                <Ionicons name="create-outline" size={20} color="#6C4AB6" />
-              </TouchableOpacity>
             </View>
-          </View>
-        </View>
-
-        {/* Additional Sections */}
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Preferences</Text>
-
-          <View style={styles.infoCard}>
-            <TouchableOpacity style={styles.optionItem}>
-              <View style={styles.iconContainer}>
-                <Ionicons name="notifications" size={20} color="#6C4AB6" />
-              </View>
-              <View style={styles.infoContent}>
-                <Text style={styles.optionLabel}>Notifications</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#999" />
-            </TouchableOpacity>
-
-            <View style={styles.separator} />
-
-            <TouchableOpacity style={styles.optionItem}>
-              <View style={styles.iconContainer}>
-                <Ionicons name="shield-checkmark" size={20} color="#6C4AB6" />
-              </View>
-              <View style={styles.infoContent}>
-                <Text style={styles.optionLabel}>Privacy</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#999" />
-            </TouchableOpacity>
-
-            <View style={styles.separator} />
-
-            <TouchableOpacity style={styles.optionItem}>
-              <View style={styles.iconContainer}>
-                <Ionicons name="help-circle" size={20} color="#6C4AB6" />
-              </View>
-              <View style={styles.infoContent}>
-                <Text style={styles.optionLabel}>Help & Support</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#999" />
-            </TouchableOpacity>
           </View>
         </View>
 

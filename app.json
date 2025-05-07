@@ -16,7 +16,8 @@
         "foregroundImage": "./assets/images/logo1.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.adamffa.full_team"
     },
     "web": {
       "bundler": "metro",
@@ -37,6 +38,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "0a2e4cfa-ff70-45cc-b35d-ba6711866d45"
+      }
     }
   }
 }

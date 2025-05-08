@@ -1,6 +1,7 @@
 import { Tabs, useRouter } from 'expo-router';
 import React from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/HapticTab';
 import { IconSymbol } from '@/components/ui/IconSymbol';
@@ -12,75 +13,72 @@ export default function TabLayout() {
   const router = useRouter();
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        tabBarInactiveTintColor: '',
-        headerShown: false,
-        tabBarButton: HapticTab,
-        tabBarStyle: Platform.select({
-          default: {
-            backgroundColor: '#7a6bbc',
-            height: 58,
-            borderTopWidth: 0,
-            shadowColor: 'transparent',
-            // position: 'absolute',
-            // bottom: 0,
-            // left: 0,
-            // right: 0,
-            // zIndex: 999,
-            // elevation: 8,
-          },
-        }),
-        // Pengaturan penting untuk mencegah keyboard menimpa tabBar
-        tabBarHideOnKeyboard: true,
-     
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#7a6bbc' }}>
+      <Tabs
+        screenOptions={{
+          tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+          tabBarInactiveTintColor: '',
+          headerShown: false,
+          tabBarButton: HapticTab,
+          tabBarStyle: Platform.select({
+            default: {
+              backgroundColor: '#7a6bbc',
+              height: 58,
+              borderTopWidth: 0,
+              shadowColor: 'transparent',
+              paddingBottom: Platform.OS === 'android' ? 10 : 20,
+              paddingTop: 5,
+            },
+          }),
+          tabBarHideOnKeyboard: true,
         }}
-      />
-      <Tabs.Screen
-        name="history"
-        options={{
-          title: 'History',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="clock.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="add"
-        options={{
-          tabBarButton: () => (
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => router.push('/(tabs)/add')}
-            >
-              <View style={styles.innerCircle}>
-                <Text style={styles.addButtonText}>+</Text>
-              </View>
-            </TouchableOpacity>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="notification"
-        options={{
-          title: 'Notification',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="bell.fill" color={color} />,
-        }}
-      />
-     
-      <Tabs.Screen
-        name="account"
-        options={{
-          title: 'Account',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="person" color={color} />,
-        }}
-      />
-    </Tabs>
+      >
+        {/* Tab Screens */}
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: 'Home',
+            tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="history"
+          options={{
+            title: 'History',
+            tabBarIcon: ({ color }) => <IconSymbol size={28} name="clock.fill" color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="add"
+          options={{
+            tabBarButton: () => (
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={() => router.push('/(tabs)/add')}
+              >
+                <View style={styles.innerCircle}>
+                  <Text style={styles.addButtonText}>+</Text>
+                </View>
+              </TouchableOpacity>
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="notification"
+          options={{
+            title: 'Notification',
+            tabBarIcon: ({ color }) => <IconSymbol size={28} name="bell.fill" color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="account"
+          options={{
+            title: 'Account',
+            tabBarIcon: ({ color }) => <IconSymbol size={28} name="person" color={color} />,
+          }}
+        />
+      </Tabs>
+    </SafeAreaView>
   );
 }
 

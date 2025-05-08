@@ -4,6 +4,7 @@ const EventContext = createContext(null);
 
 export const EventProvider = ({ children }: { children: React.ReactNode }) => {
   const [events, setEvents] = useState([]);
+  const [notifications, setNotifications] = useState<{ id: any; message: string }[]>([]); // State untuk notifikasi
   const [loading, setLoading] = useState(true);
 
   // Fetch events from API
@@ -24,9 +25,13 @@ export const EventProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Add a new event to the state
+  // Tambahkan event baru ke state dan buat notifikasi
   const addEvent = (newEvent: any) => {
     setEvents((prevEvents) => [newEvent, ...prevEvents]);
+    setNotifications((prevNotifications) => [
+      { id: newEvent.id, message: `Event "${newEvent.event_name}" telah ditambahkan.` },
+      ...prevNotifications,
+    ]);
   };
 
   useEffect(() => {
@@ -34,7 +39,7 @@ export const EventProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   return (
-    <EventContext.Provider value={{ events, loading, fetchEvents, addEvent }}>
+    <EventContext.Provider value={{ events, notifications, loading, fetchEvents, addEvent }}>
       {children}
     </EventContext.Provider>
   );

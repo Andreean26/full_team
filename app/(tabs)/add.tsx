@@ -79,14 +79,14 @@ export default function AddScreen() {
   const handleSubmit = async () => {
     try {
       const accessToken = await SecureStore.getItemAsync('accessToken');
-      const username = await SecureStore.getItemAsync('username'); // Ambil username dari SecureStore
+      const username = await SecureStore.getItemAsync('username');
       if (!accessToken || !username) {
         Alert.alert('Error', 'You are not logged in.');
         return;
       }
 
       const eventData = {
-        username, // Tambahkan username ke payload
+        username,
         category_id: parseInt(category, 10),
         event_name: eventName,
         event_start_time: startTime.toISOString(),
@@ -107,7 +107,6 @@ export default function AddScreen() {
       });
 
       const result = await response.json();
-      console.log('API Response:', result);
 
       if (result.success) {
         addEvent(result.data); // Tambahkan event baru ke context
@@ -115,7 +114,6 @@ export default function AddScreen() {
           {
             text: 'OK',
             onPress: () => {
-              // Reset form
               setCategory('');
               setEventName('');
               setStartTime(new Date());
@@ -124,15 +122,14 @@ export default function AddScreen() {
               setPeople('');
               setDescription('');
               setImage(null);
-              
-              // Kembali ke tab Home dan refresh datanya
               router.replace('/(tabs)');
-            }
-          }
+            },
+          },
         ]);
       } else {
+        // Tangani kasus di mana message adalah array
         const errorMessage = Array.isArray(result.message)
-          ? result.message.join(', ')
+          ? result.message.join(', ') // Gabungkan array menjadi string
           : result.message || 'Failed to create event.';
         Alert.alert('Error', errorMessage);
       }

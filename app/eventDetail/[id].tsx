@@ -1,44 +1,61 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React from 'react';
-import { Alert, Image, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Image, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function EventDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  
-  // Extract params
-  const { 
-    category, 
-    name, 
-    time, 
-    date, 
-    location, 
-    people, 
-    description 
-  } = params;
 
-  const handleJoinEvent = () => {
-    Alert.alert(
-      "Join Event",
-      "Are you sure you want to join this event?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel"
-        },
-        { 
-          text: "Join", 
-          onPress: () => {
-            Alert.alert("Success", "You have successfully joined this event!");
-            router.back();
-          }
-        }
-      ]
-    );
+  // State untuk menyimpan data event
+  const [eventData, setEventData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Ambil ID dari parameter URL
+  const { id } = params;
+
+  // Fungsi untuk mengambil data event dari API
+  const fetchEventData = async () => {
+    try {
+      const response = await fetch(`http://178.128.103.81:3002/api/v1/events/${id}`);
+      const result = await response.json();
+
+      if (result.success) {
+        setEventData(result.data); // Simpan data event ke state
+      } else {
+        console.error('Failed to fetch event data:', result.message);
+      }
+    } catch (error) {
+      console.error('Error fetching event data:', error);
+    } finally {
+      setLoading(false); // Set loading ke false setelah data diambil
+    }
   };
-  
+
+  // Panggil fetchEventData saat komponen dimuat
+  useEffect(() => {
+    if (id) {
+      fetchEventData();
+    }
+  }, [id]);
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text>Loading event details...</Text>
+      </View>
+    );
+  }
+
+  if (!eventData) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text>Failed to load event details.</Text>
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <Stack.Screen 
@@ -72,18 +89,18 @@ export default function EventDetailScreen() {
         {/* Event Image */}
         <View style={styles.imageContainer}>
           <Image 
-            source={require('../../assets/images/futsal.jpg')}
+            source={{ uri: eventData.image_url || 'https://example.com/default-image.jpg' }}
             style={styles.eventImage}
             resizeMode="cover"
           />
           <View style={styles.categoryBadge}>
-            <Text style={styles.categoryText}>{category}</Text>
+            <Text style={styles.categoryText}>{eventData.Category?.category_name || 'Unknown'}</Text>
           </View>
         </View>
 
         {/* Event Title and Status */}
         <View style={styles.titleContainer}>
-          <Text style={styles.eventName}>{name}</Text>
+          <Text style={styles.eventName}>{eventData.event_name}</Text>
           <View style={styles.statusContainer}>
             <View style={styles.statusDot} />
             <Text style={styles.statusText}>Active</Text>
@@ -99,8 +116,9 @@ export default function EventDetailScreen() {
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Date & Time</Text>
-              <Text style={styles.infoValue}>{date}</Text>
-              <Text style={styles.infoValue}>{time}</Text>
+              <Text style={styles.infoValue}>
+                {new Date(eventData.event_start_time).toLocaleDateString()} - {new Date(eventData.event_end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </Text>
             </View>
           </View>
 
@@ -113,7 +131,7 @@ export default function EventDetailScreen() {
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Location</Text>
-              <Text style={styles.infoValue}>{location}</Text>
+              <Text style={styles.infoValue}>{eventData.location}</Text>
             </View>
           </View>
 
@@ -126,7 +144,7 @@ export default function EventDetailScreen() {
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Participants</Text>
-              <Text style={styles.infoValue}>{people}</Text>
+              <Text style={styles.infoValue}>{eventData.number_people}</Text>
             </View>
           </View>
         </View>
@@ -135,43 +153,10 @@ export default function EventDetailScreen() {
         <View style={styles.descriptionContainer}>
           <Text style={styles.sectionTitle}>Description</Text>
           <Text style={styles.descriptionText}>
-            {description || "No description provided for this event."}
+            {eventData.description || "No description provided for this event."}
           </Text>
         </View>
-
-        {/* Participants List (Preview) */}
-        <View style={styles.participantsSection}>
-          <Text style={styles.sectionTitle}>Participants</Text>
-          <View style={styles.participantsPreview}>
-            {/* Dummy participant avatars */}
-            {[1, 2, 3, 4, 5].map((item) => (
-              <View key={item} style={styles.avatarContainer}>
-                <Image 
-                  source={{ uri: `https://randomuser.me/api/portraits/men/${20 + item}.jpg` }} 
-                  style={styles.avatar} 
-                />
-              </View>
-            ))}
-            <View style={[styles.avatarContainer, styles.moreAvatar]}>
-              <Text style={styles.moreText}>+3</Text>
-            </View>
-          </View>
-        </View>
       </ScrollView>
-
-      {/* Action Button */}
-      <View style={styles.actionContainer}>
-        <TouchableOpacity style={styles.joinButton} onPress={handleJoinEvent}>
-          <LinearGradient
-            colors={['#6C4AB6', '#8D72E1']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.gradientButton}
-          >
-            <Text style={styles.joinButtonText}>Join Event</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
 }
@@ -330,74 +315,14 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     color: '#555',
   },
-  participantsSection: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 24,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3.84,
-  },
-  participantsPreview: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatarContainer: {
-    marginRight: -10,
-    borderWidth: 2,
-    borderColor: '#fff',
-    borderRadius: 20,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-  },
-  moreAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#6C4AB6',
+  loadingContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  moreText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  actionContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-  },
-  joinButton: {
-    borderRadius: 12,
-    overflow: 'hidden',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  gradientButton: {
-    alignItems: 'center',
+  errorContainer: {
+    flex: 1,
     justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 12,
-  },
-  joinButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
+    alignItems: 'center',
   },
 });

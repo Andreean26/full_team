@@ -1,51 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React from 'react';
-import { Image, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-
-// Data dummy untuk history events
-const historyEvents = [
-  {
-    id: '1',
-    category: 'Football/Futsal',
-    name: 'Informatic FC',
-    time: '19.00 - 21.00 WIB',
-    date: '12 May 2025', 
-    location: 'SM Futsal',
-    people: '8/20',
-    image: require('../../assets/images/futsal.jpg'),
-    icon: 'football',
-    description: 'Weekly friendly futsal match for all skill levels. Join us for some fun!'
-  },
-  {
-    id: '2',
-    category: 'Basketball',
-    name: 'Fun Basket',
-    time: '16.00 - 18.00 WIB',
-    date: '10 May 2025',
-    location: 'Almahira Basketball',
-    people: '10/12',
-    image: require('../../assets/images/futsal.jpg'),
-    icon: 'basketball',
-    description: 'Basketball practice session for beginners and intermediates.'
-  },
-  {
-    id: '3',
-    category: 'Football/Futsal',
-    name: 'Weekend Futsal',
-    time: '20.00 - 22.00 WIB',
-    date: '8 May 2025',
-    location: 'Galaxy Futsal',
-    people: '12/14',
-    image: require('../../assets/images/futsal.jpg'),
-    icon: 'football',
-    description: 'Weekend futsal session. All players welcome, any skill level.'
-  }
-];
+import React, { useEffect } from 'react';
+import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEvents } from '../../hooks/EventContext';
 
 export default function HistoryScreen() {
   const router = useRouter();
+  const { events, fetchEvents } = useEvents(); // Ambil events dan fungsi fetchEvents dari context
+
+  useEffect(() => {
+    fetchEvents(); // Muat ulang data saat halaman dibuka
+  }, []);
 
   const handleEventPress = (event: any) => {
     // Navigasi ke halaman detail dengan data event
@@ -53,14 +19,14 @@ export default function HistoryScreen() {
       pathname: "/eventDetail/[id]",
       params: {
         id: event.id,
-        category: event.category,
-        name: event.name,
-        time: event.time,
-        // date: event.date,
+        category: event.Category?.category_name || 'Unknown',
+        name: event.event_name,
+        time: `${new Date(event.event_start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${new Date(event.event_end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
         location: event.location,
-        people: event.people,
+        people: `${event.number_people}`,
         description: event.description,
-      }
+        imageUrl: event.image_url || 'https://example.com/default-image.jpg',
+      },
     });
   };
 
@@ -81,51 +47,36 @@ export default function HistoryScreen() {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* Filter options */}
-        {/* <View style={styles.filterContainer}>
-          <TouchableOpacity style={[styles.filterButton, styles.activeFilter]}>
-            <Text style={styles.activeFilterText}>All</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.filterButton}>
-            <Text style={styles.filterText}>Upcoming</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.filterButton}>
-            <Text style={styles.filterText}>Past</Text>
-          </TouchableOpacity>
-        </View> */}
-
         {/* Event Cards */}
         <View style={styles.eventList}>
-          {historyEvents.map((event) => (
-            <TouchableOpacity 
-              key={event.id}
-              style={styles.eventCard}
-              onPress={() => handleEventPress(event)}
-            >
-              <Image source={event.image} style={styles.eventImage} />
-              <View style={styles.eventContent}>
-                <View style={styles.eventHeader}>
-                  <Ionicons name={event.icon as any} size={16} color="#6C4AB6" />
-                  <Text style={styles.eventCategory}>{event.category}</Text>
-                </View>
-                <Text style={styles.eventTitle}>{event.name}</Text>
-                {/* <Text style={styles.eventDate}>{event.date}</Text> */}
-                <Text style={styles.eventTime}>{event.time}</Text>
-                <Text style={styles.eventLocation}>
-                  <Ionicons name="location" size={14} color="#7a6bbc" /> {event.location}
-                </Text>
-                <View style={styles.eventFooter}>
-                  <Text style={styles.eventPeople}>
-                    <Ionicons name="people" size={14} color="#7a6bbc" /> {event.people}
+          {events.length === 0 ? (
+            <Text style={styles.emptyText}>No events found.</Text>
+          ) : (
+            events.map((event) => (
+              <TouchableOpacity 
+                key={event.id}
+                style={styles.eventCard}
+                onPress={() => handleEventPress(event)}
+              >
+                {/* Event Image */}
+                <Image source={{ uri: event.image_url || 'https://example.com/default-image.jpg' }} style={styles.eventImage} />
+                
+                {/* Event Content */}
+                <View style={styles.eventContent}>
+                  <Text style={styles.eventTitle}>{event.event_name}</Text>
+                  <Text style={styles.eventTime}>
+                    <Ionicons name="time-outline" size={14} color="#6C4AB6" /> {`${new Date(event.event_start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${new Date(event.event_end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
                   </Text>
-                  <View style={styles.eventStatus}>
-                    <View style={styles.statusDot} />
-                    <Text style={styles.statusText}>Active</Text>
-                  </View>
+                  <Text style={styles.eventLocation}>
+                    <Ionicons name="location-outline" size={14} color="#6C4AB6" /> {event.location}
+                  </Text>
+                  <Text style={styles.eventPeople}>
+                    <Ionicons name="people-outline" size={14} color="#6C4AB6" /> {event.number_people} people
+                  </Text>
                 </View>
-              </View>
-            </TouchableOpacity>
-          ))}
+              </TouchableOpacity>
+            ))
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -138,8 +89,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fa',
   },
   headerContainer: {
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight || 0 + 16 : 16,
-    paddingBottom: 16,
+    paddingVertical: 16,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
@@ -154,42 +104,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#fff',
     textAlign: 'center',
-    marginTop: 30,
   },
   contentContainer: {
     padding: 16,
     paddingBottom: 40,
-  },
-  filterContainer: {
-    flexDirection: 'row',
-    marginBottom: 16,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  filterButton: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 8,
-  },
-  activeFilter: {
-    backgroundColor: '#6C4AB6',
-  },
-  filterText: {
-    color: '#666',
-    fontWeight: '500',
-    fontSize: 14,
-  },
-  activeFilterText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
   },
   eventList: {
     gap: 16,
@@ -212,65 +130,30 @@ const styles = StyleSheet.create({
   eventContent: {
     padding: 16,
   },
-  eventHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  eventCategory: {
-    fontSize: 14,
-    color: '#6C4AB6',
-    fontWeight: '500',
-    marginLeft: 6,
-  },
   eventTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 6,
   },
-  eventDate: {
+  eventTime: {
     fontSize: 14,
     color: '#555',
     marginBottom: 4,
   },
-  eventTime: {
-    fontSize: 14,
-    color: '#555',
-    marginBottom: 8,
-  },
   eventLocation: {
     fontSize: 14,
     color: '#777',
-    marginBottom: 12,
-  },
-  eventFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    marginBottom: 4,
   },
   eventPeople: {
     fontSize: 14,
     color: '#666',
   },
-  eventStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E7F6E7',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 12,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#4CAF50',
-    marginRight: 4,
-  },
-  statusText: {
-    fontSize: 12,
-    color: '#4CAF50',
-    fontWeight: '500',
+  emptyText: {
+    fontSize: 16,
+    color: '#888',
+    textAlign: 'center',
+    marginTop: 20,
   },
 });

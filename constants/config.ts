@@ -1,5 +1,5 @@
 // Base URL for the API
-const API_BASE_URL = "http://localhost:3002/api/v1";
+export const API_BASE_URL = "http://178.128.103.81:3002/api/v1"; // Gunakan IP publik atau domain
 
 // Accounts API Endpoints
 const ACCOUNTS_GET_ALL = `${API_BASE_URL}/accounts`;

@@ -4,15 +4,15 @@ import { Link, useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import React, { useState } from 'react';
 import {
-    Alert,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    SafeAreaView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { authStyles } from '../../styles/authStyles';
 
@@ -41,10 +41,16 @@ export default function LoginScreen() {
           const { id } = result.data.account;
           const { accessToken } = result.data;
 
-          // Simpan id dan accessToken ke SecureStore
-          await SecureStore.setItemAsync('userId', id.toString());
-          await SecureStore.setItemAsync('username', username);
-          await SecureStore.setItemAsync('accessToken', accessToken);
+          if (Platform.OS === 'web') {
+            console.warn('SecureStore is not supported on web');
+            localStorage.setItem('userId', id.toString());
+            localStorage.setItem('username', username);
+            localStorage.setItem('accessToken', accessToken);
+          } else {
+            await SecureStore.setItemAsync('userId', id.toString());
+            await SecureStore.setItemAsync('username', username);
+            await SecureStore.setItemAsync('accessToken', accessToken);
+          }
 
           // Navigasi ke halaman utama
           router.replace('/(tabs)');
@@ -52,8 +58,11 @@ export default function LoginScreen() {
           Alert.alert('Login Error', result.message || 'Login failed');
         }
       } catch (error) {
-        console.error('Error during login:', error);
-        Alert.alert('Login Error', 'An error occurred during login');
+        if(__DEV__){
+         console.error('Error during login:', error); 
+        }
+        const errorMessage = (error as any)?.message || 'An unexpected error occurred. Please try again later.';
+        Alert.alert('Login Error', errorMessage);
       }
     } else {
       Alert.alert('Login Error', 'Please enter username and password');

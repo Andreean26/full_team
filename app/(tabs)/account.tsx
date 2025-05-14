@@ -1,15 +1,60 @@
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform, StatusBar } from 'react-native';
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import * as SecureStore from "expo-secure-store";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Image,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+
+const isWeb = Platform.OS === "web";
+
+// Adapter untuk web
+const webStorage = {
+  getItem: (key: string): Promise<string | null> => {
+    return Promise.resolve(localStorage.getItem(key));
+  },
+
+  setItem: (key: string, value: string): Promise<void> => {
+    localStorage.setItem(key, value);
+    return Promise.resolve();
+  },
+
+  deleteItem: (key: string): Promise<void> => {
+    localStorage.removeItem(key);
+    return Promise.resolve();
+  },
+};
+
+// Fungsi ekspor yang mendeteksi platform
+export const getItemAsync = (key: string): Promise<string | null> => {
+  return isWeb ? webStorage.getItem(key) : SecureStore.getItemAsync(key);
+};
+
+export const setItemAsync = (key: string, value: string): Promise<void> => {
+  return isWeb
+    ? webStorage.setItem(key, value)
+    : SecureStore.setItemAsync(key, value);
+};
+
+export const deleteItemAsync = (key: string): Promise<void> => {
+  return isWeb ? webStorage.deleteItem(key) : SecureStore.deleteItemAsync(key);
+};
 
 export default function AccountScreen() {
   const [user, setUser] = useState({
-    username: '',
-    email: '',
-    phone_number: '',
-    photo: 'https://randomuser.me/api/portraits/men/32.jpg', // Placeholder photo
+    username: "",
+    email: "",
+    phone_number: "",
+    photo: "https://randomuser.me/api/portraits/men/32.jpg", // Placeholder photo
   });
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -18,17 +63,20 @@ export default function AccountScreen() {
     const fetchUserData = async () => {
       try {
         // Ambil id dan accessToken dari SecureStore
-        const userId = await SecureStore.getItemAsync('userId');
-        const accessToken = await SecureStore.getItemAsync('accessToken');
+        const userId = await SecureStore.getItemAsync("userId");
+        const accessToken = await SecureStore.getItemAsync("accessToken");
 
         if (userId && accessToken) {
           // Lakukan permintaan GET ke API untuk mendapatkan data akun
-          const response = await fetch(`http://178.128.103.81:3002/api/v1/accounts/${userId}`, {
-            method: 'GET',
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          });
+          const response = await fetch(
+            `http://178.128.103.81:3002/api/v1/accounts/${userId}`,
+            {
+              method: "GET",
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+              },
+            }
+          );
 
           const result = await response.json();
 
@@ -38,14 +86,14 @@ export default function AccountScreen() {
               username: result.data.username,
               email: result.data.email,
               phone_number: result.data.phone_number,
-              photo: 'https://randomuser.me/api/portraits/men/32.jpg', // Placeholder photo
+              photo: "https://randomuser.me/api/portraits/men/32.jpg", // Placeholder photo
             });
           } else {
-            console.error('Failed to fetch user data:', result.message);
+            console.error("Failed to fetch user data:", result.message);
           }
         }
       } catch (error) {
-        console.error('Error fetching user data:', error);
+        console.error("Error fetching user data:", error);
       } finally {
         setLoading(false);
       }
@@ -54,12 +102,14 @@ export default function AccountScreen() {
     fetchUserData();
   }, []);
 
+  
   const handleLogout = async () => {
-    // Hapus data dari SecureStore dan navigasi ke halaman login
-    await SecureStore.deleteItemAsync('userId');
-    await SecureStore.deleteItemAsync('accessToken');
-    router.replace('/auth/login');
-  };
+  // Hapus data dari SecureStore dan navigasi ke halaman login
+  await SecureStore.deleteItemAsync("userId");
+  await SecureStore.deleteItemAsync("accessToken");
+  router.replace("/auth/login");
+};
+
 
   if (loading) {
     return (
@@ -85,7 +135,9 @@ export default function AccountScreen() {
           </View>
 
           <Text style={styles.profileName}>{user.username}</Text>
-          <Text style={styles.profileBio}>Sports Enthusiast | Football Player</Text>
+          <Text style={styles.profileBio}>
+            Sports Enthusiast | Football Player
+          </Text>
         </View>
 
         <View style={styles.sectionContainer}>
@@ -128,20 +180,20 @@ export default function AccountScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
   },
   headerContainer: {
-    backgroundColor: '#fff',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    backgroundColor: "#fff",
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
     paddingHorizontal: 20,
     paddingVertical: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: "#eee",
     elevation: 3,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -149,8 +201,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
   },
   settingsButton: {
     padding: 5,
@@ -160,11 +212,11 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   profileCard: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 16,
     padding: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
@@ -172,7 +224,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   photoContainer: {
-    position: 'relative',
+    position: "relative",
     marginBottom: 15,
   },
   profilePhoto: {
@@ -180,89 +232,89 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     borderWidth: 3,
-    borderColor: '#7a6bbc',
+    borderColor: "#7a6bbc",
   },
   editPhotoButton: {
-    backgroundColor: '#6C4AB6',
+    backgroundColor: "#6C4AB6",
     width: 36,
     height: 36,
     borderRadius: 18,
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     right: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: "#fff",
   },
   profileName: {
     fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     marginBottom: 4,
   },
   profileBio: {
     fontSize: 14,
-    color: '#777',
+    color: "#777",
     marginBottom: 20,
   },
   statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
     paddingHorizontal: 10,
   },
   statItem: {
-    alignItems: 'center',
+    alignItems: "center",
     flex: 1,
   },
   statNumber: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#6C4AB6',
+    fontWeight: "bold",
+    color: "#6C4AB6",
   },
   statLabel: {
     fontSize: 12,
-    color: '#777',
+    color: "#777",
     marginTop: 4,
   },
   divider: {
     width: 1,
     height: 30,
-    backgroundColor: '#eee',
+    backgroundColor: "#eee",
   },
   sectionContainer: {
     marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     marginBottom: 12,
     paddingHorizontal: 5,
   },
   infoCard: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 16,
     padding: 5,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 2,
   },
   infoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 15,
   },
   iconContainer: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(108, 74, 182, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(108, 74, 182, 0.1)",
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 15,
   },
   infoContent: {
@@ -270,39 +322,39 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 12,
-    color: '#777',
+    color: "#777",
     marginBottom: 4,
   },
   infoValue: {
     fontSize: 16,
-    color: '#333',
+    color: "#333",
   },
   optionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 15,
   },
   optionLabel: {
     fontSize: 16,
-    color: '#333',
+    color: "#333",
   },
   separator: {
     height: 1,
-    backgroundColor: '#eee',
+    backgroundColor: "#eee",
     marginLeft: 55,
   },
   logoutButton: {
-    backgroundColor: '#6C4AB6',
+    backgroundColor: "#6C4AB6",
     borderRadius: 12,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     padding: 16,
     marginTop: 10,
   },
   logoutText: {
-    color: '#fff',
-    fontWeight: 'bold',
+    color: "#fff",
+    fontWeight: "bold",
     fontSize: 16,
     marginLeft: 8,
   },

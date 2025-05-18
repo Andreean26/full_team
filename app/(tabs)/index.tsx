@@ -11,9 +11,8 @@ export default function HomeScreen() {
 
   const handleCardPress = (event: any) => {
     router.push({
-      pathname: `/teamDetail/${event.id}`,
+      pathname: `/teamDetail/${event.id}`, // ID sudah ada di path, tidak perlu lagi di params
       params: {
-        id: event.id,
         imageUrl: event.image_url || 'https://example.com/default-image.jpg',
         name: event.event_name,
         details: event.description,

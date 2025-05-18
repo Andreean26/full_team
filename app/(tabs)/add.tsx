@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import React, { useState } from 'react';
-import { Alert, Image, Platform, SafeAreaView, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useEvents } from '../../hooks/EventContext'; // Import useEvents
 import { addStyles } from '../../styles/addStyles';
 
@@ -21,6 +21,7 @@ export default function AddScreen() {
   const [image, setImage] = useState<string | null>(null);
   const [description, setDescription] = useState('');
   const [people, setPeople] = useState('');
+  const [price, setPrice] = useState('');
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
 
@@ -95,6 +96,7 @@ export default function AddScreen() {
         number_people: parseInt(people, 10),
         description,
         image_url: image || 'https://example.com/default-image.jpg',
+        price: parseInt(price, 10), // tambahkan ini
       };
 
       const response = await fetch('http://178.128.103.81:3002/api/v1/events', {
@@ -140,200 +142,225 @@ export default function AddScreen() {
   };
 
   return (
-    <SafeAreaView style={addStyles.container}>
-      {/* Header dengan gradient */}
-      <LinearGradient
-        colors={['#6C4AB6', '#8D72E1']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={addStyles.headerContainer}
-      >
-        <Text style={addStyles.title}>Create New Event</Text>
-      </LinearGradient>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24} // Bisa disesuaikan jika ada header
+    >
+      <SafeAreaView style={addStyles.container}>
+        {/* Header dengan gradient */}
+        <LinearGradient
+          colors={['#6C4AB6', '#8D72E1']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={addStyles.headerContainer}
+        >
+          <Text style={addStyles.title}>Create New Event</Text>
+        </LinearGradient>
 
-      {/* Content */}
-      <ScrollView
-        contentContainerStyle={addStyles.contentContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Image Picker */}
-        <View style={addStyles.imageSection}>
-          {image ? (
-            <View style={addStyles.imageContainer}>
-              <Image source={{ uri: image }} style={addStyles.imagePreview} />
-              <TouchableOpacity style={addStyles.changeImageButton} onPress={pickImage}>
-                <Ionicons name="camera" size={20} color="#fff" />
+        {/* Content */}
+        <ScrollView
+          contentContainerStyle={addStyles.contentContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Image Picker */}
+          <View style={addStyles.imageSection}>
+            {image ? (
+              <View style={addStyles.imageContainer}>
+                <Image source={{ uri: image }} style={addStyles.imagePreview} />
+                <TouchableOpacity style={addStyles.changeImageButton} onPress={pickImage}>
+                  <Ionicons name="camera" size={20} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity style={addStyles.emptyImageContainer} onPress={pickImage}>
+                <View style={addStyles.addImageIconContainer}>
+                  <Ionicons name="image-outline" size={40} color="#6C4AB6" />
+                  <Text style={addStyles.addImageText}>Add Event Image</Text>
+                </View>
               </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity style={addStyles.emptyImageContainer} onPress={pickImage}>
-              <View style={addStyles.addImageIconContainer}>
-                <Ionicons name="image-outline" size={40} color="#6C4AB6" />
-                <Text style={addStyles.addImageText}>Add Event Image</Text>
+            )}
+          </View>
+
+          {/* Form Container */}
+          <View style={addStyles.formCard}>
+            {/* Dropdown Category */}
+            <View style={addStyles.inputGroup}>
+              <View style={addStyles.labelContainer}>
+                <Ionicons name="list" size={20} color="#6C4AB6" />
+                <Text style={addStyles.label}>Category</Text>
               </View>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Form Container */}
-        <View style={addStyles.formCard}>
-          {/* Dropdown Category */}
-          <View style={addStyles.inputGroup}>
-            <View style={addStyles.labelContainer}>
-              <Ionicons name="list" size={20} color="#6C4AB6" />
-              <Text style={addStyles.label}>Category</Text>
-            </View>
-            <View style={addStyles.pickerContainer}>
-              <Picker
-                selectedValue={category}
-                onValueChange={(itemValue) => setCategory(itemValue)}
-                style={addStyles.picker}
-              >
-                <Picker.Item label="Select a category" value="" />
-                {categories.map((cat) => (
-                  <Picker.Item key={cat.id} label={cat.category_name} value={cat.id.toString()} />
-                ))}
-              </Picker>
-            </View>
-          </View>
-
-          {/* Input Event Name */}
-          <View style={addStyles.inputGroup}>
-            <View style={addStyles.labelContainer}>
-              <Ionicons name="text" size={20} color="#6C4AB6" />
-              <Text style={addStyles.label}>Event Name</Text>
-            </View>
-            <TextInput
-              style={addStyles.input}
-              placeholder="Enter event name"
-              value={eventName}
-              onChangeText={setEventName}
-              placeholderTextColor="#999"
-            />
-          </View>
-
-          {/* Time Pickers */}
-          <View style={addStyles.timeSection}>
-            <View style={addStyles.labelContainer}>
-              <Ionicons name="time" size={20} color="#6C4AB6" />
-              <Text style={addStyles.label}>Event Time</Text>
-            </View>
-            <View style={addStyles.timeRow}>
-              {/* Start Time */}
-              <View style={addStyles.timePickerContainer}>
-                <Text style={addStyles.timeLabel}>Start</Text>
-                <TouchableOpacity
-                  style={addStyles.timePicker}
-                  onPress={() => setShowStartTimePicker(true)}
+              <View style={addStyles.pickerContainer}>
+                <Picker
+                  selectedValue={category}
+                  onValueChange={(itemValue) => setCategory(itemValue)}
+                  style={addStyles.picker}
                 >
-                  <Text style={addStyles.timeText}>
-                    {startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </Text>
-                  <Ionicons name="chevron-down" size={18} color="#6C4AB6" />
-                </TouchableOpacity>
-              </View>
-
-              <Text style={addStyles.timeConnector}>to</Text>
-
-              {/* End Time */}
-              <View style={addStyles.timePickerContainer}>
-                <Text style={addStyles.timeLabel}>End</Text>
-                <TouchableOpacity
-                  style={addStyles.timePicker}
-                  onPress={() => setShowEndTimePicker(true)}
-                >
-                  <Text style={addStyles.timeText}>
-                    {endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </Text>
-                  <Ionicons name="chevron-down" size={18} color="#6C4AB6" />
-                </TouchableOpacity>
+                  <Picker.Item label="Select a category" value="" />
+                  {categories.map((cat) => (
+                    <Picker.Item key={cat.id} label={cat.category_name} value={cat.id.toString()} />
+                  ))}
+                </Picker>
               </View>
             </View>
-          </View>
 
-          {/* Location */}
-          <View style={addStyles.inputGroup}>
-            <View style={addStyles.labelContainer}>
-              <Ionicons name="location" size={20} color="#6C4AB6" />
-              <Text style={addStyles.label}>Location</Text>
+            {/* Input Event Name */}
+            <View style={addStyles.inputGroup}>
+              <View style={addStyles.labelContainer}>
+                <Ionicons name="text" size={20} color="#6C4AB6" />
+                <Text style={addStyles.label}>Event Name</Text>
+              </View>
+              <TextInput
+                style={addStyles.input}
+                placeholder="Enter event name"
+                value={eventName}
+                onChangeText={setEventName}
+                placeholderTextColor="#999"
+              />
             </View>
-            <TextInput
-              style={addStyles.input}
-              placeholder="Enter event location"
-              value={location}
-              onChangeText={setLocation}
-              placeholderTextColor="#999"
-            />
-          </View>
 
-          {/* Number of People */}
-          <View style={addStyles.inputGroup}>
-            <View style={addStyles.labelContainer}>
-              <Ionicons name="people" size={20} color="#6C4AB6" />
-              <Text style={addStyles.label}>Number of People</Text>
+            {/* Time Pickers */}
+            <View style={addStyles.timeSection}>
+              <View style={addStyles.labelContainer}>
+                <Ionicons name="time" size={20} color="#6C4AB6" />
+                <Text style={addStyles.label}>Event Time</Text>
+              </View>
+              <View style={addStyles.timeRow}>
+                {/* Start Time */}
+                <View style={addStyles.timePickerContainer}>
+                  <Text style={addStyles.timeLabel}>Start</Text>
+                  <TouchableOpacity
+                    style={addStyles.timePicker}
+                    onPress={() => setShowStartTimePicker(true)}
+                  >
+                    <Text style={addStyles.timeText}>
+                      {startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                    <Ionicons name="chevron-down" size={18} color="#6C4AB6" />
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={addStyles.timeConnector}>to</Text>
+
+                {/* End Time */}
+                <View style={addStyles.timePickerContainer}>
+                  <Text style={addStyles.timeLabel}>End</Text>
+                  <TouchableOpacity
+                    style={addStyles.timePicker}
+                    onPress={() => setShowEndTimePicker(true)}
+                  >
+                    <Text style={addStyles.timeText}>
+                      {endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                    <Ionicons name="chevron-down" size={18} color="#6C4AB6" />
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
-            <TextInput
-              style={addStyles.input}
-              placeholder="Enter capacity"
-              value={people}
-              onChangeText={setPeople}
-              keyboardType="numeric"
-              placeholderTextColor="#999"
-            />
-          </View>
 
-          {/* Description */}
-          <View style={addStyles.inputGroup}>
-            <View style={addStyles.labelContainer}>
-              <Ionicons name="document-text" size={20} color="#6C4AB6" />
-              <Text style={addStyles.label}>Description</Text>
+            {/* Location */}
+            <View style={addStyles.inputGroup}>
+              <View style={addStyles.labelContainer}>
+                <Ionicons name="location" size={20} color="#6C4AB6" />
+                <Text style={addStyles.label}>Location</Text>
+              </View>
+              <TextInput
+                style={addStyles.input}
+                placeholder="Enter event location"
+                value={location}
+                onChangeText={setLocation}
+                placeholderTextColor="#999"
+              />
             </View>
-            <TextInput
-              style={[addStyles.input, addStyles.textArea]}
-              placeholder="Enter event description"
-              value={description}
-              onChangeText={setDescription}
-              placeholderTextColor="#999"
-              multiline={true}
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
+
+            {/* Number of People */}
+            <View style={addStyles.inputGroup}>
+              <View style={addStyles.labelContainer}>
+                <Ionicons name="people" size={20} color="#6C4AB6" />
+                <Text style={addStyles.label}>Number of People</Text>
+              </View>
+              <TextInput
+                style={addStyles.input}
+                placeholder="Enter capacity"
+                value={people}
+                onChangeText={setPeople}
+                keyboardType="numeric"
+                placeholderTextColor="#999"
+              />
+            </View>
+
+            {/* Description */}
+            <View style={addStyles.inputGroup}>
+              <View style={addStyles.labelContainer}>
+                <Ionicons name="document-text" size={20} color="#6C4AB6" />
+                <Text style={addStyles.label}>Description</Text>
+              </View>
+              <TextInput
+                style={[addStyles.input, addStyles.textArea]}
+                placeholder="Enter event description"
+                value={description}
+                onChangeText={setDescription}
+                placeholderTextColor="#999"
+                multiline={true}
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+            </View>
+
+            {/* Price */}
+            <View style={addStyles.inputGroup}>
+              <View style={addStyles.labelContainer}>
+                <Ionicons name="pricetag" size={20} color="#6C4AB6" />
+                <Text style={addStyles.label}>Price</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontSize: 18, color: '#6C4AB6', marginRight: 8 }}>Rp</Text>
+                <TextInput
+                  style={[addStyles.input, { flex: 1 }]}
+                  placeholder="Masukkan harga"
+                  value={price}
+                  onChangeText={setPrice}
+                  keyboardType="numeric"
+                  placeholderTextColor="#999"
+                />
+              </View>
+            </View>
           </View>
-        </View>
 
-        {/* Submit Button */}
-        <TouchableOpacity style={addStyles.submitButton} onPress={handleSubmit}>
-          <LinearGradient
-            colors={['#6C4AB6', '#8D72E1']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={addStyles.gradientButton}
-          >
-            <Text style={addStyles.buttonText}>Create Event</Text>
-            <Ionicons name="arrow-forward" size={20} color="#fff" />
-          </LinearGradient>
-        </TouchableOpacity>
-      </ScrollView>
+          {/* Submit Button */}
+          <TouchableOpacity style={addStyles.submitButton} onPress={handleSubmit}>
+            <LinearGradient
+              colors={['#6C4AB6', '#8D72E1']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={addStyles.gradientButton}
+            >
+              <Text style={addStyles.buttonText}>Create Event</Text>
+              <Ionicons name="arrow-forward" size={20} color="#fff" />
+            </LinearGradient>
+          </TouchableOpacity>
+        </ScrollView>
 
-      {/* Time Pickers (Modals) */}
-      {showStartTimePicker && (
-        <DateTimePicker
-          value={startTime}
-          mode="time"
-          is24Hour={true}
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={handleStartTimeChange}
-        />
-      )}
-      {showEndTimePicker && (
-        <DateTimePicker
-          value={endTime}
-          mode="time"
-          is24Hour={true}
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={handleEndTimeChange}
-        />
-      )}
-    </SafeAreaView>
+        {/* Time Pickers (Modals) */}
+        {showStartTimePicker && (
+          <DateTimePicker
+            value={startTime}
+            mode="time"
+            is24Hour={true}
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={handleStartTimeChange}
+          />
+        )}
+        {showEndTimePicker && (
+          <DateTimePicker
+            value={endTime}
+            mode="time"
+            is24Hour={true}
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={handleEndTimeChange}
+          />
+        )}
+      </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }

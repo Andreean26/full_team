@@ -26,64 +26,180 @@ export default function TeamDetailScreen() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [eventData, setEventData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [participants, setParticipants] = useState<any[]>([]);
+  const [isLoadingParticipants, setIsLoadingParticipants] = useState(true); // Tambahkan loading state
+  const [isAlreadyRegistered, setIsAlreadyRegistered] = useState(false); // Tambahkan state ini di bagian atas komponen
+
+  // Tambahkan state untuk price
+  const [priceInfo, setPriceInfo] = useState<{ price?: number; price_per_person?: number }>({});
+
+  // Pastikan id berupa string angka, lalu parse ke integer jika perlu
+  const eventId = typeof id === 'string' ? id : Array.isArray(id) ? id[0] : '';
 
   // Fetch event data from API
   useEffect(() => {
     const fetchEventData = async () => {
       try {
-        // Ambil data event berdasarkan ID
-        const response = await fetch(`http://178.128.103.81:3002/api/v1/events/${id}`);
+        const response = await fetch(`http://178.128.103.81:3002/api/v1/events/${eventId}`);
         const result = await response.json();
 
         if (result.success) {
-          console.log('Event data fetched successfully:', result.data);
           setEventData(result.data);
-        } else {
-          console.error('Failed to fetch event data:', result.message);
         }
       } catch (error) {
-        console.error('Error fetching event data:', error);
+        // handle error
       } finally {
         setLoading(false);
       }
     };
 
-    if (id) {
+    if (eventId) {
       fetchEventData();
     }
-  }, [id]);
+  }, [eventId]);
+
+  // Fetch price info
+  useEffect(() => {
+    const fetchPrice = async () => {
+      if (!eventId) return;
+      try {
+        const res = await fetch(`http://178.128.103.81:3002/api/v1/events/${eventId}/price`);
+        const data = await res.json();
+        // console.log('Price API result:', data);
+        setPriceInfo({
+          price: data.data?.price,
+          price_per_person: data.data?.price_per_person,
+        });
+      } catch (e) {
+        setPriceInfo({});
+      }
+    };
+    fetchPrice();
+  }, [eventId]);
+
+  // Define fetchParticipants outside useEffect so it can be called elsewhere
+  const fetchParticipants = async () => {
+    if (!eventId) return;
+    
+    setIsLoadingParticipants(true);
+    console.log('Fetching participants for event ID:', eventId);
+    
+    try {
+      // Tambahkan timestamp untuk menghindari cache
+      const res = await fetch(`http://178.128.103.81:3002/api/v1/participants?event_id=${eventId}&_t=${new Date().getTime()}`);
+      const data = await res.json();
+      console.log('API Response participants:', data);
+      
+      if (data.success) {
+        // Pastikan hanya participants untuk event ini yang disimpan
+        const eventParticipants = data.data.filter(p => p.event_id.toString() === eventId.toString());
+        setParticipants(eventParticipants || []);
+        console.log('Filtered participants for event', eventId, eventParticipants);
+      } else {
+        setParticipants([]);
+      }
+    } catch (e) {
+      console.error('Error fetching participants:', e);
+      setParticipants([]);
+    } finally {
+      setIsLoadingParticipants(false);
+    }
+  };
+
+  // Fetch participants
+  useEffect(() => {
+    // Tambahkan logging
+    console.log('Effect triggered with eventId:', eventId);
+    
+    // Reset participants saat ID berubah (penting!)
+    setParticipants([]);
+    
+    if (eventId) {
+      fetchParticipants();
+    }
+    
+    // Tambahkan cleanup function untuk mencegah race condition
+    return () => {
+      console.log('Cleaning up effect for eventId:', eventId);
+      // Ini membantu jika navigasi cepat antar event
+    };
+  }, [eventId]);
+
+  // Log participants setiap kali berubah
+  useEffect(() => {
+    console.log('Participants for event', eventId, participants);
+  }, [eventId, participants]);
+
+  // Tambahkan fungsi untuk cek status registrasi
+  const checkRegistrationStatus = async () => {
+    try {
+      const userId = await SecureStore.getItemAsync('userId');
+      if (!userId || !eventId) return;
+      
+      console.log('Checking registration status for user', userId, 'in event', eventId);
+      
+      // Ambil data participants dari API
+      const res = await fetch(`http://178.128.103.81:3002/api/v1/participants?event_id=${eventId}`);
+      const data = await res.json();
+      
+      if (data.success && Array.isArray(data.data)) {
+        // Cari apakah ada participant dengan account_id yang sama
+        const isRegistered = data.data.some(p => 
+          p.account_id.toString() === userId.toString()
+        );
+        
+        console.log('User registration status:', isRegistered ? 'Already registered' : 'Not registered');
+        setIsAlreadyRegistered(isRegistered);
+      }
+    } catch (e) {
+      console.error('Error checking registration status:', e);
+    }
+  };
+
+  // Panggil checkRegistrationStatus setiap kali participants berubah atau komponen pertama kali load
+  useEffect(() => {
+    if (eventId) {
+      checkRegistrationStatus();
+    }
+  }, [eventId, participants]);
 
   const handleRegisterTeam = async () => {
+    // Jika sudah terdaftar, jangan lanjutkan
+    if (isAlreadyRegistered) {
+      Alert.alert('Info', 'You are already registered for this event!');
+      return;
+    }
+    
+    // Log eventId saat register untuk debugging
+    console.log('Registering for event with ID:', eventId);
+    
     Alert.alert(
       "Register for Team",
       "Are you sure you want to register for this team?",
       [
-        {
-          text: "Cancel",
-          style: "cancel"
-        },
+        { text: "Cancel", style: "cancel" },
         { 
           text: "Register", 
           onPress: async () => {
             try {
-              // Ambil accessToken dan userId dari SecureStore
               const accessToken = await SecureStore.getItemAsync('accessToken');
               const userId = await SecureStore.getItemAsync('userId');
               const username = await SecureStore.getItemAsync('username');
-              
+
               if (!accessToken || !userId) {
                 Alert.alert('Error', 'You need to login first');
                 return;
               }
-              
-              // Data untuk pendaftaran
+
+              // Gunakan eventId yang sudah diparse
               const participantData = {
                 account_id: parseInt(userId, 10),
-                event_id: parseInt(id as string, 10),
-                participant_name: username || "User" // Tambahkan participant_name
+                event_id: parseInt(eventId, 10),
+                participant_name: username || "User"
               };
-              
-              // Kirim POST request ke API participants
+
+              console.log('Data yang dikirim ke API participants:', participantData);
+
               const response = await fetch('http://178.128.103.81:3002/api/v1/participants', {
                 method: 'POST',
                 headers: {
@@ -92,11 +208,14 @@ export default function TeamDetailScreen() {
                 },
                 body: JSON.stringify(participantData)
               });
-              
+
               const result = await response.json();
-              
+              console.log('Response dari API participants:', result);
+
               if (result.success) {
                 Alert.alert("Success", "You have successfully registered for this team!");
+                // Re-fetch participants untuk update
+                fetchParticipants();
               } else {
                 const errorMessage = Array.isArray(result.message)
                   ? result.message.join(', ')
@@ -223,30 +342,68 @@ export default function TeamDetailScreen() {
 
           <View style={styles.divider} />
 
-          {/* Players */}
+          {/* Tambahkan Price */}
+          <View style={styles.infoRow}>
+            <View style={styles.iconContainer}>
+              <Ionicons name="pricetag" size={20} color="#6C4AB6" />
+            </View>
+            <View style={styles.infoContent}>
+              <Text style={styles.infoLabel}>Total Price</Text>
+              <Text style={styles.infoValue}>
+                {priceInfo.price != null
+                  ? `Rp ${Number(priceInfo.price).toLocaleString('id-ID')}`
+                  : 'Memuat...'}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.divider} />
+
+          {/* Tambahkan Price Per Person */}
+          <View style={styles.infoRow}>
+            <View style={styles.iconContainer}>
+              <Ionicons name="cash" size={20} color="#6C4AB6" />
+            </View>
+            <View style={styles.infoContent}>
+              <Text style={styles.infoLabel}>Price per Person</Text>
+              <Text style={styles.infoValue}>
+                {priceInfo.price_per_person != null
+                  ? `Rp ${Number(priceInfo.price_per_person).toLocaleString('id-ID')}`
+                  : 'Memuat...'}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.divider} />
+
+          {/* Participants */}
           <View style={styles.infoRow}>
             <View style={styles.iconContainer}>
               <Ionicons name="people" size={20} color="#6C4AB6" />
             </View>
             <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Players</Text>
-              <View style={styles.playersInfoContainer}>
-                <Text style={styles.infoValue}>{people}</Text>
-                {people && (
-                  <Text style={styles.slotsText}>
-                    {calculateSlots(people)}
+              <Text style={styles.infoLabel}>Participants</Text>
+              {isLoadingParticipants ? (
+                <Text style={styles.infoValue}>Loading participants...</Text>
+              ) : (
+                <>
+                  <Text style={styles.infoValue}>
+                    {participants.length} / {typeof people === 'string' ? people : people} joined
                   </Text>
-                )}
-              </View>
-              {people && (
-                <View style={styles.progressBarContainer}>
-                  <View 
-                    style={[
-                      styles.progressBar, 
-                      { width: `${(typeof people === 'string' && people.includes('/') ? (parseInt(people.split('/')[0]) / parseInt(people.split('/')[1])) * 100 : 0)}%` }
-                    ]} 
-                  />
-                </View>
+                  {/* List participant names */}
+                  {participants.length > 0 && (
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 4 }}>
+                      {participants.map((p, idx) => (
+                        <Text 
+                          key={`${eventId}-${p.id || idx}`} 
+                          style={{ marginRight: 8, color: '#6C4AB6', fontSize: 13 }}
+                        >
+                          {p.participant_name}
+                        </Text>
+                      ))}
+                    </View>
+                  )}
+                </>
               )}
             </View>
           </View>
@@ -260,23 +417,33 @@ export default function TeamDetailScreen() {
           </Text>
         </View>
 
-        {/* Team Members */}
+        {/* Participants Preview */}
         <View style={styles.participantsSection}>
-          <Text style={styles.sectionTitle}>Team Members</Text>
-          <View style={styles.participantsPreview}>
-            {/* Dummy participant avatars */}
-            {[1, 2, 3, 4, 5].map((item) => (
-              <View key={item} style={styles.avatarContainer}>
-                <Image 
-                  source={{ uri: `https://randomuser.me/api/portraits/men/${20 + item}.jpg` }} 
-                  style={styles.avatar} 
-                />
-              </View>
-            ))}
-            <View style={[styles.avatarContainer, styles.moreAvatar]}>
-              <Text style={styles.moreText}>+3</Text>
+          <Text style={styles.sectionTitle}>Participants</Text>
+          {isLoadingParticipants ? (
+            <Text>Loading participants...</Text>
+          ) : (
+            <View style={styles.participantsPreview}>
+              {participants.length > 0 ? (
+                participants.slice(0, 3).map((participant) => (
+                  <View key={`preview-${eventId}-${participant.id}`} style={styles.avatarContainer}>
+                    <Image 
+                      source={{ uri: participant.account?.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(participant.participant_name) }}
+                      style={styles.avatar}
+                    />
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.infoValue}>No participants yet</Text>
+              )}
+              
+              {participants.length > 3 && (
+                <View style={styles.moreAvatar}>
+                  <Text style={styles.moreText}>+{participants.length - 3}</Text>
+                </View>
+              )}
             </View>
-          </View>
+          )}
         </View>
 
         {/* Team Schedule */}
@@ -319,14 +486,20 @@ export default function TeamDetailScreen() {
 
       {/* Action Button */}
       <View style={styles.actionContainer}>
-        <TouchableOpacity style={styles.registerButton} onPress={handleRegisterTeam}>
+        <TouchableOpacity 
+          style={[styles.registerButton, isAlreadyRegistered && styles.alreadyRegisteredButton]} 
+          onPress={isAlreadyRegistered ? () => Alert.alert('Info', 'You are already registered for this event!') : handleRegisterTeam}
+          disabled={isAlreadyRegistered}
+        >
           <LinearGradient
-            colors={['#6C4AB6', '#8D72E1']}
+            colors={isAlreadyRegistered ? ['#9E9E9E', '#BDBDBD'] : ['#6C4AB6', '#8D72E1']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.gradientButton}
           >
-            <Text style={styles.registerButtonText}>Register</Text>
+            <Text style={styles.registerButtonText}>
+              {isAlreadyRegistered ? 'Already Registered' : 'Register'}
+            </Text>
           </LinearGradient>
         </TouchableOpacity>
       </View>
@@ -633,5 +806,9 @@ const styles = StyleSheet.create({
     color: '#6C4AB6',
     marginLeft: 8,
     fontWeight: '500',
+  },
+  alreadyRegisteredButton: {
+    backgroundColor: '#9E9E9E',
+    opacity: 0.8,
   },
 });

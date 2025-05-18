@@ -1,17 +1,73 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useEffect } from 'react';
-import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
+import React, { useEffect, useState } from 'react';
+import { Alert, Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useEvents } from '../../hooks/EventContext';
 
 export default function HistoryScreen() {
   const router = useRouter();
-  const { events, fetchEvents } = useEvents(); // Ambil events dan fungsi fetchEvents dari context
+  const { events, fetchEvents } = useEvents();
+  const [currentUsername, setCurrentUsername] = useState('');
+  const [userEvents, setUserEvents] = useState([]);
 
+  // Ambil username pengguna yang login dan filter event
   useEffect(() => {
-    fetchEvents(); // Muat ulang data saat halaman dibuka
+    const getUserInfo = async () => {
+      const username = await SecureStore.getItemAsync('username');
+      setCurrentUsername(username || '');
+      
+      // Filter event hanya yang dibuat oleh user yang login
+      if (username && events.length > 0) {
+        const filteredEvents = events.filter(event => event.username === username);
+        setUserEvents(filteredEvents);
+      }
+    };
+    
+    getUserInfo();
+  }, [events]);
+
+  // Fetch events saat komponen dimount
+  useEffect(() => {
+    fetchEvents();
   }, []);
+
+  // Fungsi untuk menghapus event
+  const handleDelete = async (eventId: number) => {
+    Alert.alert(
+      "Delete Event",
+      "Are you sure you want to delete this event?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const accessToken = await SecureStore.getItemAsync('accessToken');
+              const response = await fetch(`http://178.128.103.81:3002/api/v1/events/${eventId}`, {
+                method: 'DELETE',
+                headers: {
+                  'Authorization': `Bearer ${accessToken}`,
+                  'Content-Type': 'application/json',
+                },
+              });
+              const result = await response.json();
+              if (result.success) {
+                Alert.alert("Success", "Event deleted successfully.");
+                fetchEvents(); // Refresh list
+              } else {
+                Alert.alert("Error", result.message || "Failed to delete event.");
+              }
+            } catch (error) {
+              Alert.alert("Error", "An error occurred while deleting the event.");
+            }
+          }
+        }
+      ]
+    );
+  };
 
   const handleEventPress = (event: any) => {
     // Navigasi ke halaman detail dengan data event
@@ -49,10 +105,19 @@ export default function HistoryScreen() {
       >
         {/* Event Cards */}
         <View style={styles.eventList}>
-          {events.length === 0 ? (
-            <Text style={styles.emptyText}>No events found.</Text>
+          {userEvents.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="calendar-outline" size={60} color="#ccc" />
+              <Text style={styles.emptyText}>You haven't created any events yet</Text>
+              <TouchableOpacity 
+                style={styles.createEventButton}
+                onPress={() => router.push('/(tabs)/add')}
+              >
+                <Text style={styles.createEventText}>Create New Event</Text>
+              </TouchableOpacity>
+            </View>
           ) : (
-            events.map((event) => (
+            userEvents.map((event) => (
               <TouchableOpacity 
                 key={event.id}
                 style={styles.eventCard}
@@ -64,6 +129,7 @@ export default function HistoryScreen() {
                 {/* Event Content */}
                 <View style={styles.eventContent}>
                   <Text style={styles.eventTitle}>{event.event_name}</Text>
+                  
                   <Text style={styles.eventTime}>
                     <Ionicons name="time-outline" size={14} color="#6C4AB6" /> {`${new Date(event.event_start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${new Date(event.event_end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
                   </Text>
@@ -73,6 +139,17 @@ export default function HistoryScreen() {
                   <Text style={styles.eventPeople}>
                     <Ionicons name="people-outline" size={14} color="#6C4AB6" /> {event.number_people} people
                   </Text>
+                  
+                  {/* Tombol Delete */}
+                  <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={(e) => {
+                      e.stopPropagation(); // Mencegah trigger handleEventPress
+                      handleDelete(event.id);
+                    }}
+                  >
+                    <Text style={styles.deleteButtonText}>Delete</Text>
+                  </TouchableOpacity>
                 </View>
               </TouchableOpacity>
             ))
@@ -150,10 +227,44 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
   emptyText: {
     fontSize: 16,
     color: '#888',
     textAlign: 'center',
-    marginTop: 20,
+    marginTop: 12,
+    marginBottom: 20,
+  },
+  createEventButton: {
+    backgroundColor: '#6C4AB6',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  createEventText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  deleteButton: {
+    marginTop: 10,
+    backgroundColor: '#E74C3C',
+    paddingVertical: 6,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  deleteButtonText: {
+    color: '#fff', 
+    fontWeight: 'bold'
+  },
+  eventCreator: {
+    fontSize: 14,
+    color: '#6C4AB6',
+    marginBottom: 4,
+    fontWeight: '500',
   },
 });

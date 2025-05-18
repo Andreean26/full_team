@@ -4,16 +4,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function RegisterScreen() {
@@ -22,44 +22,65 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState('');
   const router = useRouter();
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     // Validasi dasar
     if (!username.trim()) {
       Alert.alert('Registration Error', 'Please enter a username');
       return;
     }
-    
     if (!email.trim()) {
       Alert.alert('Registration Error', 'Please enter an email');
       return;
     }
-    
+    if (!phoneNumber.trim()) {
+      Alert.alert('Registration Error', 'Please enter a phone number');
+      return;
+    }
     if (!password.trim()) {
       Alert.alert('Registration Error', 'Please enter a password');
       return;
     }
-    
     if (password !== confirmPassword) {
       Alert.alert('Registration Error', 'Passwords do not match');
       return;
     }
 
-    // Registrasi berhasil - dalam aplikasi nyata akan menyimpan data ke server
-    Alert.alert(
-      'Registration Successful',
-      'Your account has been created successfully',
-      [
-        {
-          text: 'OK',
-          onPress: () => {
-            // Navigasi langsung ke halaman utama
-            router.replace('/(tabs)');
-          },
-        },
-      ]
-    );
+    // Kirim ke API
+    try {
+      const payload = {
+        username,
+        email,
+        phone_number: phoneNumber,
+        password,
+      };
+      const response = await fetch('http://178.128.103.81:3002/api/v1/accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json();
+      if (result.success) {
+        Alert.alert(
+          'Registration Successful',
+          'Your account has been created successfully',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                router.replace('/(tabs)');
+              },
+            },
+          ]
+        );
+      } else {
+        Alert.alert('Registration Error', result.message || 'Failed to register');
+      }
+    } catch (error) {
+      Alert.alert('Registration Error', 'An error occurred during registration');
+    }
   };
 
   return (
@@ -114,6 +135,21 @@ export default function RegisterScreen() {
               </View>
             </View>
 
+             {/* Phone Number Input */}
+            <View style={authStyles.inputGroup}>
+              <View style={authStyles.inputContainer}>
+                <Ionicons name="call-outline" size={20} color="#6C4AB6" style={authStyles.inputIcon} />
+                <TextInput
+                  style={authStyles.input}
+                  placeholder="Phone Number"
+                  value={phoneNumber}
+                  onChangeText={setPhoneNumber}
+                  keyboardType="phone-pad"
+                  placeholderTextColor="#999"
+                />
+              </View>
+            </View>
+
             {/* Password Input */}
             <View style={authStyles.inputGroup}>
               <View style={authStyles.inputContainer}>
@@ -158,6 +194,8 @@ export default function RegisterScreen() {
               </View>
             </View>
 
+           
+
             {/* Register Button */}
             <TouchableOpacity style={authStyles.submitButton} onPress={handleRegister}>
               <LinearGradient
@@ -180,21 +218,7 @@ export default function RegisterScreen() {
               </Link>
             </View>
 
-            {/* Social Register */}
-            <View style={authStyles.socialContainer}>
-              <Text style={authStyles.orText}>Or sign up with</Text>
-              <View style={authStyles.socialButtons}>
-                <TouchableOpacity style={authStyles.socialButton}>
-                  <Ionicons name="logo-google" size={20} color="#DB4437" />
-                </TouchableOpacity>
-                <TouchableOpacity style={authStyles.socialButton}>
-                  <Ionicons name="logo-facebook" size={20} color="#4267B2" />
-                </TouchableOpacity>
-                <TouchableOpacity style={authStyles.socialButton}>
-                  <Ionicons name="logo-apple" size={20} color="#000" />
-                </TouchableOpacity>
-              </View>
-            </View>
+            
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

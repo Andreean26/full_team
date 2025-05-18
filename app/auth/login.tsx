@@ -127,9 +127,9 @@ export default function LoginScreen() {
           </View>
 
           {/* Forgot Password */}
-          <TouchableOpacity style={authStyles.forgotPasswordContainer}>
+          {/* <TouchableOpacity style={authStyles.forgotPasswordContainer}>
             <Text style={authStyles.forgotPasswordText}>Forgot Password?</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           {/* Login Button */}
           <TouchableOpacity style={authStyles.submitButton} onPress={handleLogin}>
@@ -153,21 +153,7 @@ export default function LoginScreen() {
             </Link>
           </View>
 
-          {/* Social Login */}
-          <View style={authStyles.socialContainer}>
-            <Text style={authStyles.orText}>Or sign in with</Text>
-            <View style={authStyles.socialButtons}>
-              <TouchableOpacity style={authStyles.socialButton}>
-                <Ionicons name="logo-google" size={20} color="#DB4437" />
-              </TouchableOpacity>
-              <TouchableOpacity style={authStyles.socialButton}>
-                <Ionicons name="logo-facebook" size={20} color="#4267B2" />
-              </TouchableOpacity>
-              <TouchableOpacity style={authStyles.socialButton}>
-                <Ionicons name="logo-apple" size={20} color="#000" />
-              </TouchableOpacity>
-            </View>
-          </View>
+          
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

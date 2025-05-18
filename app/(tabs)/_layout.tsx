@@ -1,7 +1,7 @@
 import { Tabs, useRouter } from 'expo-router';
-import React from 'react';
-import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useEffect, useState } from 'react';
+import { Dimensions, Platform, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/HapticTab';
 import { IconSymbol } from '@/components/ui/IconSymbol';
@@ -11,25 +11,54 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const [screenDimensions, setScreenDimensions] = useState(Dimensions.get('window'));
+
+  // Update dimensions when screen size changes (rotation)
+  useEffect(() => {
+    const onChange = ({ window }) => {
+      setScreenDimensions(window);
+    };
+    
+    const subscription = Dimensions.addEventListener('change', onChange);
+    return () => subscription.remove();
+  }, []);
+
+  // Calculate safe tab bar height based on platform and insets
+  const getTabBarHeight = () => {
+    // Base height
+    const baseHeight = 58;
+    
+    if (Platform.OS === 'ios') {
+      // Add extra space for iPhone models with home indicator
+      const bottomInset = insets.bottom > 0 ? insets.bottom - 10 : 0;
+      return baseHeight + bottomInset;
+    } else {
+      // For Android, add a small padding if needed
+      return baseHeight + (insets.bottom > 0 ? insets.bottom - 5 : 0);
+    }
+  };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#7a6bbc' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#7a6bbc' }} edges={['left', 'right']}>
       <Tabs
         screenOptions={{
           tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
           tabBarInactiveTintColor: '',
           headerShown: false,
           tabBarButton: HapticTab,
-          tabBarStyle: Platform.select({
-            default: {
-              backgroundColor: '#7a6bbc',
-              height: 58,
-              borderTopWidth: 0,
-              shadowColor: 'transparent',
-              paddingBottom: Platform.OS === 'android' ? 10 : 20,
-              paddingTop: 5,
-            },
-          }),
+          tabBarStyle: {
+            backgroundColor: '#7a6bbc',
+            height: getTabBarHeight(),
+            borderTopWidth: 0,
+            shadowColor: 'transparent',
+            paddingBottom: Platform.OS === 'ios' 
+              ? Math.max(insets.bottom, 10) 
+              : Math.max(insets.bottom, 8),
+            paddingTop: 5,
+            // Ensure content doesn't go under home indicator/navigation bar
+            paddingHorizontal: Math.max(insets.left, insets.right, 10),
+          },
           tabBarHideOnKeyboard: true,
         }}
       >
@@ -51,16 +80,29 @@ export default function TabLayout() {
         <Tabs.Screen
           name="add"
           options={{
-            tabBarButton: () => (
-              <TouchableOpacity
-                style={styles.addButton}
-                onPress={() => router.push('/(tabs)/add')}
-              >
+            title: '',
+            tabBarIcon: ({ focused }) => (
+              <View style={[
+                styles.addButton,
+                { 
+                  backgroundColor: focused ? '#fff' : '#fff', 
+                  borderWidth: focused ? 2 : 0, 
+                  borderColor: '#7a6bbc',
+                  bottom: insets.bottom > 0 ? 5 : 0 // Adjust position based on insets
+                }
+              ]}>
                 <View style={styles.innerCircle}>
                   <Text style={styles.addButtonText}>+</Text>
                 </View>
-              </TouchableOpacity>
+              </View>
             ),
+            tabBarLabel: () => null,
+          }}
+          listeners={{
+            tabPress: (e) => {
+              e.preventDefault();
+              router.push('/(tabs)/add');
+            }
           }}
         />
         <Tabs.Screen
@@ -85,7 +127,6 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   addButton: {
     position: 'absolute',
-    // left: 9,
     width: 60,
     height: 60,
     borderRadius: 30,
